@@ -15,3 +15,4 @@ Create a simple deployment model with
 ## Next steps:
 * Plan #2: Self-managed MongoDB
 * Plan #3: CI / CD pipeline instead of build server
+* Plan #4: Optimize static assets delivery using CDN Caching and `google_compute_url_map`
