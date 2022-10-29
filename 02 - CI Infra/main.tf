@@ -24,7 +24,7 @@ resource "google_compute_instance" "ci_server" {
   name         = "ci-server"
   machine_type = "e2-medium"
   zone    = "us-central1-c"
-  tags = ["private"]
+  tags = ["ci"]
   
   labels = {
     "app" = "webtool"
@@ -109,7 +109,7 @@ resource "google_compute_firewall" "ci_ingress" {
 
   # Firewall will be attached to all instances with specified network tag. 
   # If not specified, firewall is applied to all instances in the network
-  target_tags = ["private"]
+  target_tags = ["ci"]
 }
 
 
