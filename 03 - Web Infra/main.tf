@@ -42,12 +42,6 @@ resource "google_compute_instance_template" "webserver_template" {
     subnetwork = data.google_compute_subnetwork.webserver_subnet.id
     # TODO: Check if specifying subnet can be avoided for non-default network. 
     # network = data.google_compute_network.vpc.id
-
-    # INFO: Creating ephemeral external IP for health probe to hit the server
-    # TODO: Set up cloud NAT / router 
-    # access_config {
-    # }
-
   }
 
   service_account {
@@ -57,42 +51,29 @@ resource "google_compute_instance_template" "webserver_template" {
 
   metadata_startup_script = <<-EOF
     #! /bin/bash
-    NAME=$(curl -H "Metadata-Flavor: Google" http://metadata.google.internal/computeMetadata/v1/instance/name)
-    ZONE=$(curl -H "Metadata-Flavor: Google" http://metadata.google.internal/computeMetadata/v1/instance/zone | sed 's@.*/@@')
     sudo apt-get update
-    sudo apt-get install -y stress apache2
-    sudo systemctl start apache2
-    cat <<INNEREOF> /var/www/html/index.html
-    <html>
-        <head>
-            <title> Managed Bowties </title>
-        </head>
-        <style>
-    h1 {
-    text-align: center;
-    font-size: 50px;
-    }
-    h2 {
-    text-align: center;
-    font-size: 40px;
-    }
-    h3 {
-    text-align: right;
-    }
-    </style>
-        <body style="font-family: sans-serif"></body>
-        <body>
-            <h1>Aaaand.... Success!</h1>
-            <h2>MACHINE NAME <span style="color: #3BA959">$NAME</span> DATACENTER <span style="color: #5383EC">$ZONE</span></h2>
-            <section id="photos">
-                <p style="text-align:center;"><img src="https://storage.googleapis.com/tony-bowtie-pics/managing-bowties.svg" alt="Managing Bowties"></p>
-            </section>
-        </body>
-    </html>
-    INNEREOF
+
+    curl -fsSL https://deb.nodesource.com/setup_19.x | sudo -E bash - &&\
+    sudo apt-get install -y nodejs
+    node --version
+
+    echo "Current directory:"
+    pwd
+    echo "Who am i?"
+    whoami
+    echo "GCloud account used"
+    gcloud config list
+
+    # COPY FILES FROM CLOUD STORE
+    STORE_ROOT=gs://web-tool-build-files
+    gsutil -m cp -r $STORE_ROOT/ ./
+    cd web-tool-build-files/
+    npm ci
+    node server.js
     EOF
 
 }
+# INFO: npm clean install : https://docs.npmjs.com/cli/v8/commands/npm-ci
 
 # HEALTH CHECK
 resource "google_compute_health_check" "autohealing" {
@@ -103,7 +84,7 @@ resource "google_compute_health_check" "autohealing" {
   unhealthy_threshold = 3
 
   tcp_health_check {
-    port = "80"
+    port = "3000"
   }
 }
 
@@ -190,7 +171,7 @@ resource "google_compute_backend_service" "webserver" {
   protocol = "HTTP"
   # Named ports -> https://cloud.google.com/load-balancing/docs/backend-service?&_ga=2.50422249.-1703985230.1665679367#named_ports
   # INFO: The named port must be specified in the instance group.
-  port_name               = "webserver-port-80"
+  port_name               = "webserver-port-3000"
   load_balancing_scheme   = "EXTERNAL"
   timeout_sec             = 10
   enable_cdn              = false
@@ -213,7 +194,7 @@ resource "google_compute_firewall" "webserver_ingress" {
 
   allow {
     protocol = "tcp"
-    ports    = ["22", "80", "443"]
+    ports    = ["22", "80", "443", "3000"]
   }
   source_ranges = ["0.0.0.0/0"] # TODO: change this to load balancer IP 
   target_tags   = ["webserver"]
@@ -225,7 +206,7 @@ resource "google_compute_firewall" "allow_health_checks" {
 
   allow {
     protocol = "tcp"
-    ports    = ["80"]
+    ports    = ["3000"]
   }
   source_ranges = ["35.191.0.0/16", "130.211.0.0/22"]
   target_tags   = ["webserver"]
