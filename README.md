@@ -5,13 +5,16 @@ The web tool is in a private repo and can't be made public. It is built with **M
 
 ## Plan #1: Basic deployment using Compute Engine VMs
 Create a simple deployment model with 
-* One Build / CI server responsible to build the code in production mode (React, Node)
-* Instance groups: multiple webservers which will get the built files and serve them
-* Load Balancer in front
-* Use Project metadata for service discovery (of CI and database)
+* Cloud Secret Manager to access private GitHub repo (deploy keys)
+* Single `Build / CI` server to build the code in production mode (React, Node)
+* Cloud File store / Cloud Storage to store the built files. 
+* Instance groups to create multiple webservers which will get the built files and serve them
+* External HTTP (layer 7) Load Balancer 
+* ~~Project metadata for service discovery (of CI and database)~~
 
 ![infra-1](https://user-images.githubusercontent.com/10389062/197405949-00b6c5f5-6ac2-4ea1-b29c-e04aff9d72e1.png)
 
 ## Next steps:
 * Plan #2: Self-managed MongoDB
 * Plan #3: CI / CD pipeline instead of build server
+* Plan #4: Optimize static assets delivery using CDN Caching and `google_compute_url_map`
