@@ -79,14 +79,23 @@ resource "google_compute_instance" "ci_server" {
     git config --global user.email "sanjaygeorge16@gmail.com"
     git clone git@github.com:Sanjay-George/WebTool.git
     
-    cd WebTool
+    cd /WebTool
     npm install 
     
     cd ui
     npm install
     npm run build
+    cd /WebTool
 
-    # TODO: Copy files to file store
+    # Copy files to cloud storage (cheaper than file store)
+    STORE_ROOT=gs://web-tool-build-files
+    gsutil -m cp -r libs/ $STORE_ROOT/
+    gsutil -m cp -r api/ $STORE_ROOT/
+    gsutil -m cp -r ui/dist $STORE_ROOT/ui/
+
+    gsutil cp *.js $STORE_ROOT/
+    gsutil cp package.json $STORE_ROOT/
+    gsutil cp package-lock.json $STORE_ROOT/
   EOF
 }
 
